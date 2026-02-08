@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mini E‑Commerce Portal</title>
+  <style>
+    :root{ --accent:#0066cc; --muted:#666; --bg:#f7f7f9 }
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial; margin:0; background:var(--bg); color:#222}
+    header{background:#fff; box-shadow:0 1px 8px rgba(10,10,15,.06); position:sticky; top:0; z-index:4}
+    .container{max-width:1100px;margin:0 auto;padding:16px}
+    nav{display:flex;align-items:center;gap:12px}
+    .logo{font-weight:700;color:var(--accent)}
+    .nav-links{margin-left:16px;display:flex;gap:8px}
+    .nav-links a{padding:8px 10px;text-decoration:none;color:var(--muted);border-radius:6px}
+    .nav-links a.active, .nav-links a:hover{background:rgba(0,102,204,.08); color:var(--accent)}
+    main{padding:24px}
+    .grid{display:grid;gap:16px}
+    .products{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}
+    .card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(20,20,30,.04)}
+    .card img{width:100%;height:140px;object-fit:cover;border-radius:6px}
+    button{background:var(--accent);color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(0,102,204,.12)}
+    form{display:grid;gap:10px}
+    input,textarea,select{padding:10px;border-radius:8px;border:1px solid #ddd}
+    .cols{display:grid;grid-template-columns:1fr 320px;gap:16px}
+    .small{font-size:13px;color:var(--muted)}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .flex{display:flex;gap:8px;align-items:center}
+    footer{padding:16px;text-align:center;color:var(--muted);font-size:13px}
+    .error{color:#b00020;font-size:13px}
+    .badge{background:#eee;padding:4px 8px;border-radius:999px;font-size:12px}
+    @media(max-width:880px){.cols{grid-template-columns:1fr} .nav-links{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav>
+        <div class="logo">ShopMini</div>
+        <div class="nav-links" id="menu">
+          <a href="#home" data-route="home" class="active">Home</a>
+          <a href="#products" data-route="products">Products</a>
+          <a href="#contact" data-route="contact">Contact Us</a>
+          <a href="#about" data-route="about">About Us</a>
+          <a href="#account" data-route="account">Account</a>
+        </div>
+        <div style="margin-left:auto" class="flex">
+          <div class="badge" id="wishlist-count">Wishlist: 0</div>
+          <div class="badge" id="orders-count">Orders: 0</div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" id="app">
+    <!-- Views will be injected here -->
+  </main>
+
+  <footer>
+    Built for demo • Use this single-file project as a starting point.
+  </footer>
+
+  <script>
+  // ----- Simple SPA router -----
+  const routes = {
+    home: renderHome,
+    products: renderProducts,
+    contact: renderContact,
+    about: renderAbout,
+    account: renderAccount
+  };
+
+  function navigate(route){
+    document.querySelectorAll('#menu a').forEach(a=>a.classList.toggle('active', a.dataset.route===route));
+    location.hash = '#' + route;
+    routes[route]();
+  }
+
+  window.addEventListener('hashchange', ()=>{
+    const route = location.hash.replace('#','') || 'home';
+    if(routes[route]) routes[route]();
+  });
+
+  // ----- Sample data -----
+  const sampleProducts = [
+    {id:1,name:'Wireless Headphones',price:1599, img:images/headphone.jpeg},
+    {id:2,name:'Smart Watch',price:2499, img:'https://picsum.photos/seed/w1/600/400'},
+    {id:3,name:'Running Shoes',price:2999,img:'https://picsum.photos/seed/s1/600/400'},
+    {id:4,name:'Backpack',price:1299,img:'https://picsum.photos/seed/b1/600/400'},
+    {id:5,name:'Sunglasses',price:799,img:'https://picsum.photos/seed/g1/600/400'}
+  ];
+
+  // ----- Local state in localStorage -----
+  const DB = {
+    usersKey: 'sm_users',
+    activeUserKey: 'sm_active',
+    wishlistKey: 'sm_wishlist',
+    ordersKey: 'sm_orders',
+    reviewsKey: 'sm_reviews'
+  };
+
+  function read(k, fallback){ try{ return JSON.parse(localStorage.getItem(k)) || fallback; }catch{ return fallback; } }
+  function write(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+  // initialize
+  if(!read(DB.usersKey, null)) write(DB.usersKey, []);
+  if(!read(DB.wishlistKey, null)) write(DB.wishlistKey, []);
+  if(!read(DB.ordersKey, null)) write(DB.ordersKey, []);
+  if(!read(DB.reviewsKey, null)) write(DB.reviewsKey, []);
+
+  // ----- Utility validation functions -----
+  function validateEmail(email){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+  function validatePassword(p){ return p.length >= 6; }
+
+  // ----- Renderers -----
+  function renderHome(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="grid">
+        <div class="cols">
+          <div>
+            <div class="card">
+              <h2>Welcome to ShopMini</h2>
+              <p class="small">A minimal single-file demo e-commerce portal. Use the navigation to explore products, register or login, and try out wishlist/orders/comments.</p>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button onclick="navigate('products')">Browse Products</button>
+                <button class="ghost" onclick="navigate('account')">Login / Register</button>
+              </div>
+            </div>
+
+            <div style="margin-top:12px" class="card">
+              <h3>Customer Care</h3>
+              <p class="small">Open a support ticket and view reporting options in the Contact view.</p>
+              <button onclick="navigate('contact')">Contact Us</button>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h3>Your Activity</h3>
+              <div class="list" id="activity-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Latest Products</h3>
+          <div class="products grid" id="home-products"></div>
+        </div>
+      </div>
+    `;
+
+    // populate latest products
+    const container = document.getElementById('home-products');
+    container.innerHTML = sampleProducts.slice(0,4).map(p=>`
+      <div class="card">
+        <img src="${p.img}" alt="${p.name}">
+        <h4>${p.name}</h4>
+        <div class="flex"><div class="small">₹ ${p.price}</div><div style="margin-left:auto"><button onclick="addToWishlist(${p.id})">♡ Wishlist</button></div></div>
+      </div>
+    `).join('');
+
+    renderActivity(); updateBadges();
+  }
+
+  function renderProducts(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <h2>Products</h2>
+      <div class="products grid" id="product-grid"></div>
+    `;
+    const grid = document.getElementById('product-grid');
+    grid.innerHTML = sampleProducts.map(p=>`
+      <div class="card">
+        <img src="${p.img}" alt="${p.name}">
+        <h4>${p.name}</h4>
+        <div class="small">₹ ${p.price}</div>
+        <div style="display:flex;margin-top:8px;gap:8px">
+          <button onclick="orderNow(${p.id})">Buy</button>
+          <button class="ghost" onclick="addToWishlist(${p.id})">Add to Wishlist</button>
+        </div>
+        <div style="margin-top:8px">
+          <strong>Reviews</strong>
+          <div class="small" id="reviews-${p.id}"></div>
+          <div style="margin-top:6px">
+            <input id="rev-name-${p.id}" placeholder="Your name" />
+            <input id="rev-text-${p.id}" placeholder="Write review" />
+            <button class="ghost" onclick="leaveReview(${p.id})">Submit</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    renderAllReviews();
+  }
+
+  function renderContact(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="grid">
+        <div class="card">
+          <h2>Contact Customer Care</h2>
+          <form id="contact-form">
+            <input id="c-name" placeholder="Your name" required />
+            <input id="c-email" placeholder="Email" required />
+            <select id="c-topic"><option>Order Issue</option><option>Refund</option><option>Technical</option><option>Other</option></select>
+            <textarea id="c-message" rows="5" placeholder="Describe your issue"></textarea>
+            <div class="flex"><button type="submit">Submit Ticket</button><button type="button" class="ghost" onclick="navigate('home')">Cancel</button></div>
+            <div id="contact-result" class="small"></div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>Reporting Options</h3>
+          <p class="small">You can report: fraudulent sellers, wrong product listings, or abusive reviews. Use the form and select a topic.</p>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('contact-form').addEventListener('submit', e=>{
+      e.preventDefault();
+      const name = document.getElementById('c-name').value.trim();
+      const email = document.getElementById('c-email').value.trim();
+      const topic = document.getElementById('c-topic').value;
+      const msg = document.getElementById('c-message').value.trim();
+      if(!name || !validateEmail(email) || !msg){
+        document.getElementById('contact-result').innerHTML = '<span class="error">Please provide valid name, email and message.</span>';
+        return;
+      }
+      // pretend to open ticket
+      document.getElementById('contact-result').innerHTML = 'Ticket submitted — our support will contact ' + email + '.';
+    });
+  }
+
+  function renderAbout(){
+    document.getElementById('app').innerHTML = `
+      <div class="card">
+        <h2>About Us</h2>
+        <p class="small">ShopMini is a demo e-commerce portal built as a single-file project to demonstrate common features: navigation, registration/login validation, wishlist, orders, reviews, customer care and reporting.</p>
+        <ul>
+          <li>Menu for navigation</li>
+          <li>Forms with validation (Registration & Login)</li>
+          <li>Orders, Wishlist, Reviews, Customer Care</li>
+        </ul>
+      </div>
+    `;
+  }
+
+  function renderAccount(){
+    const active = read(DB.activeUserKey, null);
+    document.getElementById('app').innerHTML = `
+      <div class="cols">
+        <div>
+          <div class="card">
+            <h3>Register</h3>
+            <form id="reg-form">
+              <input id="reg-name" placeholder="Full name" required />
+              <input id="reg-email" placeholder="Email" required />
+              <input id="reg-pass" type="password" placeholder="Password (min 6)" required />
+              <div id="reg-error" class="error"></div>
+              <div style="display:flex;gap:8px"><button>Register</button><button type="button" class="ghost" onclick="document.getElementById('reg-form').reset()">Reset</button></div>
+            </form>
+          </div>
+
+          <div style="margin-top:12px" class="card">
+            <h3>Login</h3>
+            <form id="login-form">
+              <input id="log-email" placeholder="Email" required />
+              <input id="log-pass" type="password" placeholder="Password" required />
+              <div id="log-error" class="error"></div>
+              <div style="display:flex;gap:8px"><button>Login</button><button type="button" class="ghost" onclick="guestLogin()">Guest</button></div>
+            </form>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" id="account-panel">
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('reg-form').addEventListener('submit', e=>{
+      e.preventDefault();
+      const name=document.getElementById('reg-name').value.trim();
+      const email=document.getElementById('reg-email').value.trim().toLowerCase();
+      const pass=document.getElementById('reg-pass').value;
+      const users = read(DB.usersKey, []);
+      if(!name || !validateEmail(email) || !validatePassword(pass)){
+        document.getElementById('reg-error').textContent = 'Provide valid name, email and password (min 6 chars).'; return;
+      }
+      if(users.find(u=>u.email===email)){ document.getElementById('reg-error').textContent = 'Email already registered.'; return; }
+      users.push({name,email,pass}); write(DB.usersKey, users);
+      document.getElementById('reg-error').textContent = 'Registered successfully. You may login.';
+      document.getElementById('reg-form').reset();
+    });
+
+    document.getElementById('login-form').addEventListener('submit', e=>{
+      e.preventDefault();
+      const email=document.getElementById('log-email').value.trim().toLowerCase();
+      const pass=document.getElementById('log-pass').value;
+      const users = read(DB.usersKey, []);
+      const u = users.find(x=>x.email===email && x.pass===pass);
+      if(!u){ document.getElementById('log-error').textContent = 'Invalid credentials.'; return; }
+      write(DB.activeUserKey, u);
+      document.getElementById('log-error').textContent = '';
+      renderAccount();
+    });
+
+    renderAccountPanel();
+  }
+
+  function renderAccountPanel(){
+    const panel = document.getElementById('account-panel');
+    const active = read(DB.activeUserKey, null);
+    if(!active){
+      panel.innerHTML = '<p class="small">Not logged in. Register or login to access orders, wishlist and support.</p>';
+      updateBadges();
+      return;
+    }
+    const wishlist = read(DB.wishlistKey, []).filter(x=>x.user==active.email);
+    const orders = read(DB.ordersKey, []).filter(x=>x.user==active.email);
+    panel.innerHTML = `
+      <h3>Welcome, ${active.name}</h3>
+      <div class="small">Email: ${active.email}</div>
+      <div style="margin-top:12px">
+        <button onclick="logout()" class="ghost">Logout</button>
+      </div>
+      <hr />
+      <h4>Your Wishlist</h4>
+      <div class="list">${wishlist.map(w=>`<div class="flex"><div>${w.name} — ₹${w.price}</div><div style="margin-left:auto"><button class="ghost" onclick="removeFromWishlist('${w.id}')">Remove</button></div></div>`).join('') || '<div class="small">Empty</div>'}</div>
+      <h4 style="margin-top:8px">Your Orders</h4>
+      <div class="list">${orders.map(o=>`<div class="flex"><div>${o.name} — ₹${o.price} <span class="small">(${o.date})</span></div></div>`).join('') || '<div class="small">No orders</div>'}</div>
+    `;
+    updateBadges();
+  }
+
+  function renderActivity(){
+    const act = document.getElementById('activity-list');
+    const active = read(DB.activeUserKey, null);
+    const orders = read(DB.ordersKey, []).filter(x=> active && x.user===active.email);
+    const wishlist = read(DB.wishlistKey, []).filter(x=> active && x.user===active.email);
+    act.innerHTML = `
+      <div class="small">User: ${active?active.name:'(not logged in)'}</div>
+      <div class="small">Wishlist items: ${wishlist.length}</div>
+      <div class="small">Orders: ${orders.length}</div>
+    `;
+  }
+
+  // ----- Actions -----
+  function addToWishlist(pid){
+    const p = sampleProducts.find(x=>x.id===pid);
+    const active = read(DB.activeUserKey, null);
+    if(!active){ alert('Please login to add items to wishlist.'); navigate('account'); return; }
+    const wl = read(DB.wishlistKey, []);
+    const id = String(Date.now())+ '-' + pid;
+    wl.push({id, productId:pid, user:active.email, name:p.name, price:p.price});
+    write(DB.wishlistKey, wl);
+    alert('Added to wishlist'); renderAccountPanel(); updateBadges();
+  }
+
+  function removeFromWishlist(id){
+    let wl = read(DB.wishlistKey, []);
+    wl = wl.filter(x=>x.id!==id); write(DB.wishlistKey, wl); renderAccountPanel(); updateBadges();
+  }
+
+  function orderNow(pid){
+    const p = sampleProducts.find(x=>x.id===pid);
+    const active = read(DB.activeUserKey, null);
+    if(!active){ if(confirm('Login required to place order. Go to account?')) navigate('account'); return; }
+    const orders = read(DB.ordersKey, []);
+    orders.push({id:String(Date.now()), productId:pid, user:active.email, name:p.name, price:p.price, date:new Date().toLocaleString()});
+    write(DB.ordersKey, orders); alert('Order placed — check Orders in your Account.'); renderAccountPanel(); updateBadges();
+  }
+
+  function leaveReview(pid){
+    const name = document.getElementById('rev-name-'+pid).value.trim() || 'Anonymous';
+    const text = document.getElementById('rev-text-'+pid).value.trim();
+    if(!text){ alert('Please write a review.'); return; }
+    const rev = read(DB.reviewsKey, []);
+    rev.push({id:String(Date.now()), productId:pid, name, text, date:new Date().toLocaleDateString()});
+    write(DB.reviewsKey, rev);
+    renderAllReviews();
+    document.getElementById('rev-name-'+pid).value=''; document.getElementById('rev-text-'+pid).value='';
+  }
+
+  function renderAllReviews(){
+    const revs = read(DB.reviewsKey, []);
+    sampleProducts.forEach(p=>{
+      const dom = document.getElementById('reviews-'+p.id);
+      if(!dom) return;
+      const forP = revs.filter(r=>r.productId===p.id);
+      dom.innerHTML = forP.map(r=>`<div class="small">${r.name}: ${r.text} <span class="small">(${r.date})</span></div>`).join('') || '<div class="small">No reviews yet</div>';
+    });
+  }
+
+  function logout(){ localStorage.removeItem(DB.activeUserKey); renderAccountPanel(); renderActivity(); }
+  function guestLogin(){ write(DB.activeUserKey, {name:'Guest', email:'guest@local'}); renderAccountPanel(); renderActivity(); }
+
+  function updateBadges(){
+    const wl = read(DB.wishlistKey, []);
+    const ord = read(DB.ordersKey, []);
+    const active = read(DB.activeUserKey, null);
+    const wCount = active ? wl.filter(x=>x.user===active.email).length : 0;
+    const oCount = active ? ord.filter(x=>x.user===active.email).length : 0;
+    document.getElementById('wishlist-count').textContent = 'Wishlist: ' + wCount;
+    document.getElementById('orders-count').textContent = 'Orders: ' + oCount;
+  }
+
+  // ----- Page init -----
+  (function init(){
+    // initial route
+    const r = location.hash.replace('#','') || 'home';
+    if(routes[r]) routes[r](); else navigate('home');
+
+    // attach menu links
+    document.querySelectorAll('#menu a').forEach(a=> a.addEventListener('click', e=>{ e.preventDefault(); navigate(a.dataset.route); }));
+  })();
+
+  // expose navigate for inline onclick usage
+  window.navigate = navigate; window.addToWishlist = addToWishlist; window.orderNow = orderNow; window.leaveReview = leaveReview; window.removeFromWishlist = removeFromWishlist; window.logout = logout; window.guestLogin = guestLogin;
+  </script>
+</body>
+</html>

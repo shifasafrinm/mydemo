@@ -1,0 +1,36 @@
+<!DOCTYPE html> 
+<html>
+
+<head>
+<title>Session Timeout Example</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; }
+#message { color: red; font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>Session Timeout Demo</h2>
+<p>Stay active on this page. If you don’t interact for 1 minute, your session will timeout.</p>
+<p id="message"></p>
+<script>
+let timeoutMinutes = 1; let timeout; 
+clearTimeout(timeout); 
+timeout = setTimeout(() => {
+document.getElementById("message").innerText = "Session expired due to inactivity.";
+alert("Session has timed out!");
+
+}, timeoutMinutes * 60 * 10);
+
+
+function resetTimer() {
+startTimer();
+}
+
+['mousemove', 'keydown', 'click', 'scroll'].forEach(event => {
+window.addEventListener(event, resetTimer);
+});
+
+startTime();
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Callback Function Example</title>
+<style>
+body {
+font-family: Arial;
+padding: 20px;
+}
+input, button {
+padding: 10px;
+margin-top: 10px;
+font-size: 16px;
+
+}
+#message {
+margin-top: 20px;
+font-weight: bold;
+}
+<body>
+</style> </head>
+<h2>Enter Your Name</h2>
+<input type="text" id="username" placeholder="Enter name here">
+<br>
+<button onclick="handleForm(submitSuccess, submitError)">Submit</button>
+<p id="message"></p>
+<script>
+// Main function that accepts callback
+function handleForm(onSuccess, onError) {
+let name = document.getElementById("username").value;
+if (name.trim() !== "") {
+onSuccess(name); // calling success callback
+} else {
+onError(); // calling error callback
+}
+}
+
+function submitSuccess(name) {
+document.getElementById("message").innerHTML =
+"Hello, " + name + "! Submission successful.";
+document.getElementById("message").style.color = "green";
+}
+
+function submitError() {
+
+document.getElementById("message").innerHTML =
+"Name cannot be empty!";
+document.getElementById("message").style.color = "red";
+} 
+</script>
+ </body> 
+ </html>
